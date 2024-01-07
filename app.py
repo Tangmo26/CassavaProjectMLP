@@ -118,4 +118,3 @@ elif selected_page == "make by":
     page_makeby()
 elif selected_page == "reference" :
     reference_page()
-    
