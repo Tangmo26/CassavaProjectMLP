@@ -1,13 +1,39 @@
 import streamlit as st
-import tensorflow as tf
 from PIL import Image
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
-import seaborn as sns
 import altair as alt  # Import Altair
 from streamlit_option_menu import option_menu
+from model import model
+
+class_name = ["Cassava Bacterial Blight (CBB)", 
+                "Cassava Brown Streak Disease (CBSD)",
+                "Cassava Green Mottle (CGM)",
+                "Cassava Mosaic Disease (CMD)",
+                "Healthy"
+]
+class_name_cut = ["CBB", 
+                "CBSD",
+                "CGM",
+                "CMD",
+                "Healthy"
+]
+
+with open('style.css') as f :
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+@st.cache_resource
+def preprocess_image(image_path):
+    image = Image.open(image_path)
+    image = image.resize((300, 300))
+    image_array = np.array(image)
+    image_array = np.expand_dims(image_array, axis=0)
+    return image, image_array
+
+@st.cache_resource
+def get_prediction(image_array) :
+    preds = model.predict(image_array)
+    return preds
 
 def page_home():
     st.title("Cassava Leaf Disease Classification")
@@ -24,38 +50,16 @@ def page_home():
 
 def page_prediction():
     st.title("Image Classava Prediction App")
-
-    with open('style.css') as f :
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-        
-    model = tf.keras.models.load_model('cassava_model.h5')
-        
     uploaded_file = st.file_uploader("Choose an image...", type="jpg")
-
-    class_name = ["Cassava Bacterial Blight (CBB)", 
-                "Cassava Brown Streak Disease (CBSD)",
-                "Cassava Green Mottle (CGM)",
-                "Cassava Mosaic Disease (CMD)",
-                "Healthy"
-    ]
-    class_name_cut = ["CBB", 
-                "CBSD",
-                "CGM",
-                "CMD",
-                "Healthy"
-    ]
-
-
 
     # If the user has uploaded a file
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        image = image.resize((300, 300))
-        image_array = np.array(image)
-        image_array = np.expand_dims(image_array, axis=0)
-        prediction = model.predict(image_array)
+        image, image_array = preprocess_image(uploaded_file)
+        prediction = get_prediction(image_array)
+        
         class_prediction = np.argmax(prediction, axis=1)
         st.image(image, caption="Cassava Image", use_column_width=True)
+        del image
         st.subheader(f"Predicted class : {class_name[class_prediction[0]]} ({class_prediction[0]})")
 
         col1, col2, col3= st.columns(3)
@@ -78,8 +82,6 @@ def page_prediction():
         
         st.write('Number of Cassava Leaf Disease')
         st.write(class_name)
-
-
 
 
 def page_makeby():
@@ -105,7 +107,7 @@ selected_page = option_menu(
     icons=["house", "image", "envelope", "file-earmark-text"],
 )
 
-
+# model = load_model()
 
 # Render the selected page
 if selected_page == "Home":
@@ -116,3 +118,4 @@ elif selected_page == "make by":
     page_makeby()
 elif selected_page == "reference" :
     reference_page()
+    
